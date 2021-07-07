@@ -30,45 +30,47 @@ class MyFrame
     private final JButton sub;
     private final JButton next;
     private final JButton fin;
+    private final JButton copy;
     private JLabel picLabel;
     private final JComboBox mgroup;
     public String filePath;
     public String bCode;
     public String dicTion;
-    public int  position;
+    public int position;
     public int listLength;
+    public int tckMajorGroups;
+    public boolean[] tckGroups;
     public volatile boolean cont;
     public volatile boolean nextGate;
     public volatile boolean backGate;
     public volatile boolean chngNme;
 
     private final String[] Party = {"Birthday", "Wedding", "Bridal", "Shower", "Baby", "Christmas", "Old Years", "Graduation"};
-
     private final String[] Enter_Product_Group = {};
-
     private final String[] majorGroupsNames = {"Enter Product Group", "Party"};
-
-    private final String[][] majorGroups = {Enter_Product_Group,Party};
-
-    private final JCheckBox[] options = {null, null, null, null, null, null, null, null, null};
+    private final String[][] majorGroups = {Enter_Product_Group, Party};
+    public static final JCheckBox[] options = {null, null, null, null, null, null, null, null, null};
 
     // constructor, to initialize the components
     // with default values.
-    public MyFrame(String path, String currentName, int index, int length, String dictioNary)
-    {   filePath = path;
-        position = index;
+    public MyFrame(String path, String currentName, int index, int length, String dictioNary, boolean change,
+                   int majorTicket, boolean[] grpTicket) {
         cont = false;
-        chngNme = false;
-        listLength = length -1;
+        filePath = path;
+        position = index;
+        chngNme = change;
         bCode = currentName;
         dicTion = dictioNary;
+        tckGroups = grpTicket;
+        listLength = length - 1;
+        tckMajorGroups = majorTicket;
         int chkWidth = 30;
-        int chkLength = 200;
         int chkYPos = 130;
+        int chkLength = 200;
 
         if (index < listLength) {
             nextGate = true;
-        } else if (index == listLength){
+        } else if (index == listLength) {
             nextGate = false;
         }
 
@@ -96,13 +98,15 @@ class MyFrame
         tname.setFont(new Font("Arial", Font.PLAIN, 15));
         tname.setSize(250, 20);
         tname.setLocation(405, 56);
+        if (chngNme || majorTicket != 0) {
+            tname.setText(bCode.substring(0, bCode.length() - 4));
+        }
         c.add(tname);
-        String code = tname.getText();
 
         tags = new JLabel("Tags");
         tags.setFont(new Font("Arial", Font.PLAIN, 15));
-        tags.setSize(50,20);
-        tags.setLocation(408,115);
+        tags.setSize(50, 20);
+        tags.setLocation(408, 115);
         tags.setVisible(false);
         c.add(tags);
 
@@ -118,9 +122,9 @@ class MyFrame
         back.setSize(70, 20);
         back.setLocation(408, 350);
         back.addActionListener(this);
-        if (!backGate){
+        if (!backGate) {
             back.setEnabled(false);
-        } else{
+        } else {
             back.setEnabled(true);
         }
         c.add(back);
@@ -137,28 +141,45 @@ class MyFrame
         next.setSize(70, 20);
         next.setLocation(550, 350);
         next.addActionListener(this);
-        if (!nextGate){
+        if (!nextGate) {
             next.setEnabled(false);
-        } else{
+        } else {
             next.setEnabled(true);
         }
         c.add(next);
+
+        copy = new JButton("...");
+        copy.setFont(new Font("Arial", Font.PLAIN, 15));
+        copy.setSize(20, 20);
+        copy.setLocation(656, 56);
+        copy.addActionListener(this);
+        c.add(copy);
+
+        for (int i = 0; i < options.length; i++) {
+            options[i] = new JCheckBox();
+            options[i].setFont(new Font("Arial", Font.PLAIN, 15));
+            options[i].setLocation(408, chkYPos + (20 * i));
+            options[i].setSize(chkLength, chkWidth);
+            options[i].setEnabled(false);
+            options[i].setVisible(false);
+            c.add(options[i]);
+        }
+        if (chngNme || majorTicket != 0) {
+            for (int j = 0; j < majorGroups[tckMajorGroups].length; j++) {
+                options[j].setEnabled(true);
+                options[j].setVisible(true);
+                options[j].setSelected(tckGroups[j]);
+                options[j].setText(majorGroups[tckMajorGroups][j]);
+            }
+        }
 
         mgroup = new JComboBox(majorGroupsNames);
         mgroup.setFont(new Font("Arial", Font.PLAIN, 15));
         mgroup.setSize(270, 20);
         mgroup.setLocation(405, 86);
-
-        for (int i =0 ;i < options.length; i++){
-            options[i] = new JCheckBox();
-            options[i].setFont(new Font("Arial", Font.PLAIN, 15));
-            options[i].setSize(chkLength,chkWidth);
-            options[i].setLocation(408, chkYPos + (20 * i));
-            options[i].setEnabled(false);
-            options[i].setVisible(false);
-            c.add(options[i]);
+        if (chngNme || majorTicket != 0) {
+            mgroup.setSelectedIndex(tckMajorGroups);
         }
-
         mgroup.addItemListener(new ItemListener() {
             @Override
             public void itemStateChanged(ItemEvent e) {
@@ -194,10 +215,10 @@ class MyFrame
             int height = 400;
             File f = new File(filePath);
             myImage = ImageIO.read(f);
-            myPicture = myImage.getScaledInstance(width,height, Image.SCALE_FAST);
+            myPicture = myImage.getScaledInstance(width, height, Image.SCALE_FAST);
             picLabel = new JLabel(new ImageIcon(myPicture));
-            picLabel.setSize(width,height);
-            picLabel.setLocation(0,0);
+            picLabel.setSize(width, height);
+            picLabel.setLocation(0, 0);
             c.add(picLabel);
         } catch (IOException ignored) {
         }
@@ -209,12 +230,15 @@ class MyFrame
     // by the user and act accordingly
     public void actionPerformed(ActionEvent e) {
         if (e.getSource() == sub) {
-            if (tname.getText().replaceAll("\\s","").equals("") || mgroup.getSelectedItem() == majorGroupsNames[0]) {
+            if (tname.getText().replaceAll("\\s", "").equals("")
+                    || mgroup.getSelectedItem() == majorGroupsNames[0]) {
                 String def = "";
                 tname.setText(def);
             } else {
                 bCode = tname.getText();
                 Path p = Path.of(filePath);
+                tckMajorGroups = mgroup.getSelectedIndex();
+                tckGroups = new boolean[options.length];
                 try {
                     Files.move(p, p.resolveSibling(bCode + ".jpg"));
                 } catch (IOException ioException) {
@@ -222,14 +246,15 @@ class MyFrame
                 }
                 cont = true;
                 chngNme = true;
-                dicTion += "'"+ bCode +"'"+ ":" + "'";
+                dicTion += "'" + bCode + "'" + ":" + "'";
 
-                for (int i =0; i < majorGroups.length; i++) {
+                for (int i = 0; i < majorGroups.length; i++) {
                     if (mgroup.getSelectedItem() == majorGroupsNames[i]) {
                         dicTion += majorGroupsNames[i] + ",";
-                        for (int j = 0; j < majorGroups[i].length; j++){
+                        for (int j = 0; j < majorGroups[i].length; j++) {
                             if (options[j].isSelected()) {
                                 dicTion += majorGroups[i][j] + ",";
+                                tckGroups[j] = true;
                             }
                         }
                         dicTion += "',";
@@ -237,73 +262,89 @@ class MyFrame
                 }
                 dispose();
             }
-        }
-
-        else if (e.getSource() == next) {
+        } else if (e.getSource() == next) {
             if (position < listLength) {
+                cont = true;
                 position += 1;
                 dicTion += " ";
-                cont = true;
+                chngNme = false;
+                tckMajorGroups = 0;
+                tckGroups = new boolean[options.length];
                 dispose();
+
             }
-        }
-
-        else if (e.getSource() == back) {
+        } else if (e.getSource() == back) {
+            cont = true;
             position -= 1;
+            chngNme = false;
             dispose();
+        } else if (e.getSource() == fin) {
             cont = true;
-        }
-
-        else if (e.getSource() == fin) {
             position = -1;
-            cont = true;
+            chngNme = false;
             dispose();
+        } else if (e.getSource() == copy) {
+            tname.setText(bCode.substring(0, bCode.length() - 4));
         }
     }
 
-    public int getPosition(){
-        return position;}
+    public int getPosition() {
+        return position;
+    }
 
-    public String getBarcode(){
-        return bCode;}
+    public String getBarcode() {
+        return bCode;
+    }
 
 }
 
 public class Registration {
 
-    public static void main(String[] args) throws InterruptedException
-    {   String[] pathnames = fileName();
-        StringBuilder src = new StringBuilder(path(date()).toString());
+    public static void main(String[] args) throws InterruptedException {
         int index = 0;
-        String dictioNary = "";
         int terminator = 0;
+        boolean change = false;
+        int majorTicket = 0;
+        boolean[] grpTicket = {};
+        String[] pathnames = fileName();
+        int[] majorList = new int[pathnames.length];
+        boolean[][] grpList = new boolean[pathnames.length][MyFrame.options.length];
+        StringBuilder src = new StringBuilder(path(date()).toString());
+        String dictioNary = "";
 
 
-        while (index != -1){
+        while (index != -1) {
             src.append("/").append(pathnames[index]);
-            MyFrame f = new MyFrame(src.toString(), pathnames[index], index, pathnames.length, dictioNary);
-            while(!f.cont){
+            MyFrame f = new MyFrame(src.toString(), pathnames[index], index, pathnames.length,
+                    dictioNary, change, majorList[index], grpList[index]);
+            while (!f.cont) {
                 Thread.sleep(60);
-                ++ terminator;
-                if (terminator > 10000){
+                ++terminator;
+                if (terminator > 10000) {
                     System.exit(0);
                 }
             }
             terminator = 0;
-            if (f.chngNme) {
+            change = f.chngNme;
+            if (change) {
                 pathnames[index] = f.getBarcode() + ".jpg";
                 dictioNary = f.dicTion + " ";
+                majorList[index] = f.tckMajorGroups;
+                grpList[index] = f.tckGroups;
             }
+
             src = new StringBuilder(path(date()).toString());
             index = f.getPosition();
         }
         dictioNary = "{" + dictioNary + "}";
         write(dictioNary);
+
         System.exit(0);
+
     }
 
 
-    public static String[] fileName(){
+    public static String[] fileName() {
         Path p1 = path(date());
         String pathname = p1.toString();
         File f = new File(pathname);
@@ -316,19 +357,20 @@ public class Registration {
         return fileName;
     }
 
-    public static Path path(LocalDate date){
+    public static Path path(LocalDate date) {
         String date_str = date.toString();
         return Paths.get(date_str);
     }
-    public static LocalDate date(){
+
+    public static LocalDate date() {
         return java.time.LocalDate.now();
     }
-    public static void write(String dictionary)
-    {
+
+    public static void write(String dictionary) {
         try {
             String filename = "../Product list/" + date() + ".txt";
             FileWriter fw = new FileWriter(filename, true); //the true will append the new data
-            fw.write( dictionary + System.lineSeparator());//appends the string to the file
+            fw.write(dictionary + System.lineSeparator());//appends the string to the file
             fw.close();
         } catch (IOException ioe) {
             System.err.println("IOException: " + ioe.getMessage());

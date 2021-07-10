@@ -6,14 +6,15 @@ import java.awt.event.ActionListener;
 import java.awt.event.ItemEvent;
 import java.awt.event.ItemListener;
 import java.awt.image.BufferedImage;
-import java.io.File;
-import java.io.FileWriter;
-import java.io.FilenameFilter;
-import java.io.IOException;
+import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.sql.*;
 import java.time.LocalDate;
+import java.util.Scanner;
+import javax.swing.JOptionPane;
+import javax.swing.ImageIcon;
 
 
 class MyFrame
@@ -31,11 +32,13 @@ class MyFrame
     private final JButton next;
     private final JButton fin;
     private final JButton copy;
+    private JFrame pFrame;
     private JLabel picLabel;
     private final JComboBox mgroup;
     public String filePath;
     public String bCode;
-    public String dicTion;
+    public String gName;
+    public String SQLtags;
     public int position;
     public int listLength;
     public int tckMajorGroups;
@@ -53,14 +56,13 @@ class MyFrame
 
     // constructor, to initialize the components
     // with default values.
-    public MyFrame(String path, String currentName, int index, int length, String dictioNary, boolean change,
+    public MyFrame(String path, String currentName, int index, int length, boolean change,
                    int majorTicket, boolean[] grpTicket) {
         cont = false;
         filePath = path;
         position = index;
         chngNme = change;
         bCode = currentName;
-        dicTion = dictioNary;
         tckGroups = grpTicket;
         listLength = length - 1;
         tckMajorGroups = majorTicket;
@@ -122,11 +124,7 @@ class MyFrame
         back.setSize(70, 20);
         back.setLocation(408, 350);
         back.addActionListener(this);
-        if (!backGate) {
-            back.setEnabled(false);
-        } else {
-            back.setEnabled(true);
-        }
+        back.setEnabled(backGate);
         c.add(back);
 
         fin = new JButton("Finish");
@@ -154,6 +152,8 @@ class MyFrame
         copy.setLocation(656, 56);
         copy.addActionListener(this);
         c.add(copy);
+
+
 
         for (int i = 0; i < options.length; i++) {
             options[i] = new JCheckBox();
@@ -208,8 +208,8 @@ class MyFrame
         });
         c.add(mgroup);
 
-        Image myPicture = null;
-        BufferedImage myImage = null;
+        Image myPicture;
+        BufferedImage myImage;
         try {
             int width = 400;
             int height = 400;
@@ -229,11 +229,30 @@ class MyFrame
     // to get the action performed
     // by the user and act accordingly
     public void actionPerformed(ActionEvent e) {
+        JDBCSelectTest jdbc = new JDBCSelectTest();
         if (e.getSource() == sub) {
-            if (tname.getText().replaceAll("\\s", "").equals("")
-                    || mgroup.getSelectedItem() == majorGroupsNames[0]) {
-                String def = "";
-                tname.setText(def);
+            boolean there;
+            try{
+                there = jdbc.there(tname.getText());
+            } catch (FileNotFoundException fileNotFoundException) {
+                there = false;
+                fileNotFoundException.printStackTrace();
+            }
+            boolean empty = tname.getText().replaceAll("\\s", "").equals("")
+                    || mgroup.getSelectedItem() == majorGroupsNames[0];
+            if (empty || !there){
+                pFrame = new JFrame("INVALID ENTRY");
+                if (empty) {
+                    JOptionPane.showMessageDialog(pFrame,
+                            "ENTER A Barcode and SELECT A Product Group",
+                            "MISSING ENTRY",
+                            JOptionPane.WARNING_MESSAGE);
+                } else {
+                    JOptionPane.showMessageDialog(pFrame,
+                            "Enter A Valid Barcode",
+                            "INVALID ENTRY",
+                            JOptionPane.WARNING_MESSAGE);
+                }
             } else {
                 bCode = tname.getText();
                 Path p = Path.of(filePath);
@@ -246,19 +265,28 @@ class MyFrame
                 }
                 cont = true;
                 chngNme = true;
-                dicTion += "'" + bCode + "'" + ":" + "'";
+                SQLtags = "";
+
 
                 for (int i = 0; i < majorGroups.length; i++) {
                     if (mgroup.getSelectedItem() == majorGroupsNames[i]) {
-                        dicTion += majorGroupsNames[i] + ",";
                         for (int j = 0; j < majorGroups[i].length; j++) {
                             if (options[j].isSelected()) {
-                                dicTion += majorGroups[i][j] + ",";
+                                SQLtags += majorGroups[i][j] + ",";
                                 tckGroups[j] = true;
                             }
                         }
-                        dicTion += "',";
                     }
+                }
+                try {
+                    jdbc.write(bCode,
+                            String.valueOf(tckMajorGroups),
+                            mgroup.getSelectedItem().toString(),
+                            SQLtags,
+                            LocalDate.now().toString()
+                    );
+                } catch (FileNotFoundException fileNotFoundException) {
+                    fileNotFoundException.printStackTrace();
                 }
                 dispose();
             }
@@ -266,7 +294,7 @@ class MyFrame
             if (position < listLength) {
                 cont = true;
                 position += 1;
-                dicTion += " ";
+                SQLtags = "";
                 chngNme = false;
                 tckMajorGroups = 0;
                 tckGroups = new boolean[options.length];
@@ -279,10 +307,7 @@ class MyFrame
             chngNme = false;
             dispose();
         } else if (e.getSource() == fin) {
-            cont = true;
-            position = -1;
-            chngNme = false;
-            dispose();
+            System.exit(0);
         } else if (e.getSource() == copy) {
             tname.setText(bCode.substring(0, bCode.length() - 4));
         }
@@ -300,23 +325,20 @@ class MyFrame
 
 public class Registration {
 
-    public static void main(String[] args) throws InterruptedException {
+    public static void main(String[] args) throws InterruptedException, FileNotFoundException {
         int index = 0;
         int terminator = 0;
         boolean change = false;
-        int majorTicket = 0;
-        boolean[] grpTicket = {};
         String[] pathnames = fileName();
         int[] majorList = new int[pathnames.length];
         boolean[][] grpList = new boolean[pathnames.length][MyFrame.options.length];
         StringBuilder src = new StringBuilder(path(date()).toString());
-        String dictioNary = "";
 
 
         while (index != -1) {
             src.append("/").append(pathnames[index]);
             MyFrame f = new MyFrame(src.toString(), pathnames[index], index, pathnames.length,
-                    dictioNary, change, majorList[index], grpList[index]);
+                    change, majorList[index], grpList[index]);
             while (!f.cont) {
                 Thread.sleep(60);
                 ++terminator;
@@ -328,7 +350,6 @@ public class Registration {
             change = f.chngNme;
             if (change) {
                 pathnames[index] = f.getBarcode() + ".jpg";
-                dictioNary = f.dicTion + " ";
                 majorList[index] = f.tckMajorGroups;
                 grpList[index] = f.tckGroups;
             }
@@ -336,11 +357,6 @@ public class Registration {
             src = new StringBuilder(path(date()).toString());
             index = f.getPosition();
         }
-        dictioNary = "{" + dictioNary + "}";
-        write(dictioNary);
-
-        System.exit(0);
-
     }
 
 
@@ -353,7 +369,7 @@ public class Registration {
                 return name.endsWith("jpg");
             }
         };
-        String[] fileName = f.list(filter);
+        String[] fileName = f.list(filter); //makes a list of the files that end with "jpg" to exclude .DS_Store
         return fileName;
     }
 
@@ -366,14 +382,70 @@ public class Registration {
         return java.time.LocalDate.now();
     }
 
-    public static void write(String dictionary) {
+}
+class JDBCSelectTest {
+
+    public static boolean there(String barcode) throws FileNotFoundException {
+        String url = "jdbc:mysql://localhost:3306/test_schema";
+        String username = "root";
+        String password = password();
         try {
-            String filename = "../Product list/" + date() + ".txt";
-            FileWriter fw = new FileWriter(filename, true); //the true will append the new data
-            fw.write(dictionary + System.lineSeparator());//appends the string to the file
-            fw.close();
-        } catch (IOException ioe) {
-            System.err.println("IOException: " + ioe.getMessage());
+            Connection connection = DriverManager.getConnection(url, username, password);
+            System.out.println("Connected to Database");
+            String sql = "SELECT count(*) FROM PLUS WHERE CodeText = " + barcode;
+            Statement statement = connection.createStatement();
+            ResultSet result = statement.executeQuery(sql);
+            result.next();
+            if (result.getInt(1) == 0) {
+                result.close();
+                connection.close();
+                return false;
+            } else {
+                result.close();
+                connection.close();
+                return true;
+            }
+        } catch (SQLException throwables) {
+            return false;
         }
     }
+
+
+    public static void write(String barCode, String groupCode, String groupName, String tags,
+                             String date
+
+    )
+            throws FileNotFoundException {
+        String url = "jdbc:mysql://localhost:3306/test_schema";
+        String username = "root";
+        String password = password();
+        try {
+            Connection connection = DriverManager.getConnection(url, username, password);
+            System.out.println("Connected to Database");
+            String sql = "INSERT INTO Products (CodeNumber, GroupCode, GroupName, Tags, DateEdited)" +
+                    " VALUES (" + barCode + "," + groupCode + ",\"" + groupName + "\",\"" + tags +
+                    "\",\"" + date +
+                    "\")" +
+                    " ON DUPLICATE KEY UPDATE" +
+                    " CodeNumber = " + barCode + "," +
+                    " GroupCode = " + groupCode+ "," +
+                    " GroupName = \"" + groupName + "\"," +
+                    "Tags = \"" + tags + "\"," +
+                    " DateEdited = \"" + date +"\""
+                    ;
+            System.out.println(sql);
+            Statement statement = connection.createStatement();
+            statement.executeUpdate(sql);
+            connection.close();
+        }catch (SQLException throwables){
+            throwables.printStackTrace();
+        }
+    }
+
+    public static String password() throws FileNotFoundException {
+        File config = new File("config.txt");
+        Scanner con = new Scanner(config);
+        return con.nextLine();
+    }
+
 }

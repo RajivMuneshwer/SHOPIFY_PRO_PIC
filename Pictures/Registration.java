@@ -10,11 +10,132 @@ import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 import java.sql.*;
 import java.time.LocalDate;
 import java.util.Scanner;
+import java.util.stream.Stream;
 import javax.swing.JOptionPane;
 import javax.swing.ImageIcon;
+import javax.swing.filechooser.FileNameExtensionFilter;
+import javax.swing.JMenu;
+import javax.swing.JMenuBar;
+
+
+
+public class Registration {
+
+    public static void main(String[] args) throws InterruptedException, IOException {
+        int index = 0;
+        int terminator = 0;
+        boolean change = false;
+        boolean noFile= false;
+        File theDir = new File(date().toString());
+        if (!theDir.exists()) {
+            theDir.mkdirs();
+            File empty = new File("no-image-icon.jpg");
+            Files.copy(empty.toPath(), Path.of(theDir + "/" + empty.getName()), StandardCopyOption.REPLACE_EXISTING);
+            noFile = true;
+        }
+        String[] pathnames = fileName();
+        int[] majorList = new int[pathnames.length];
+        boolean[][] grpList = new boolean[pathnames.length][MyFrame.options.length];
+        StringBuilder src = new StringBuilder(path(date()).toString());
+        int length = pathnames.length;
+        if (length == 0){
+            File empty = new File("no-image-icon.jpg");
+            Files.copy(empty.toPath(), Path.of(theDir + "/" + empty.getName()), StandardCopyOption.REPLACE_EXISTING);
+            noFile = true;
+            pathnames = fileName();
+            majorList = new int[pathnames.length];
+            grpList = new boolean[pathnames.length][MyFrame.options.length];
+            ++length;
+        }
+        if (pathnames[0].equals("no-image-icon.jpg")){
+            noFile = true;
+        }
+
+        while (index != -1) {
+            try {
+                src.append("/").append(pathnames[index]);
+            } catch (ArrayIndexOutOfBoundsException e){
+                if (pathnames.length == 0){
+                    File empty = new File("no-image-icon.jpg");
+                    Files.copy(empty.toPath(), Path.of(theDir + "/" + empty.getName()), StandardCopyOption.REPLACE_EXISTING);
+                    noFile = true;
+                    pathnames = fileName();
+                    majorList = new int[pathnames.length];
+                    grpList = new boolean[pathnames.length][MyFrame.options.length];
+                    ++length;
+                }
+                index = 0;
+                src.append("/").append(pathnames[index]);
+
+            }
+            System.out.println(pathnames[index]);
+            System.out.println(src);
+            MyFrame f = new MyFrame(src.toString(), pathnames[index], index, length,
+                    change, majorList[index], grpList[index], noFile);
+            while (!f.cont) {
+                Thread.sleep(60);
+                ++terminator;
+                if (terminator > 10000) {
+                    System.exit(0);
+                }
+            }
+            terminator = 0;
+            change = f.chngNme;
+            if (change) {
+                pathnames[index] = f.getBarcode() + ".jpg";
+                majorList[index] = f.tckMajorGroups;
+                grpList[index] = f.tckGroups;
+            }
+
+            src = new StringBuilder(path(date()).toString());
+            index = f.getPosition();
+            noFile = f.nofile;
+
+            if (f.iM){
+                System.out.println("chanfed");
+                pathnames = fileName();
+                length= pathnames.length;
+                majorList = new int[pathnames.length];
+                grpList = new boolean[pathnames.length][MyFrame.options.length];
+                index = f.getPosition();
+            }
+
+
+        }
+
+    }
+
+
+    public static String[] fileName() {
+        Path p1 = path(date());
+        String pathname = p1.toString();
+        File f = new File(pathname);
+        FilenameFilter filter = new FilenameFilter() {
+            public boolean accept(File f, String name) {
+                return name.endsWith("jpg");
+            }
+        };
+        String[] fileName = f.list(filter); //makes a list of the files that end with "jpg" to exclude .DS_Store
+        fileName = Stream.of(fileName).sorted().toArray(String[]::new);
+        return fileName;
+    }
+
+    public static Path path(LocalDate date) {
+        String date_str = date.toString();
+        return Paths.get(date_str);
+    }
+
+    public static LocalDate date() {
+        return java.time.LocalDate.now();
+    }
+
+}
+
+
 
 
 class MyFrame
@@ -28,6 +149,7 @@ class MyFrame
     private final JButton back;
     public JTextField tname;
     private final JLabel tags;
+    private JLabel counter;
     private final JButton sub;
     private final JButton next;
     private final JButton fin;
@@ -39,6 +161,12 @@ class MyFrame
     public String bCode;
     public String gName;
     public String SQLtags;
+    public JMenuBar menuBar;
+    public JMenu fiLe;
+    public JMenuItem imPort;
+    public JMenuItem oPen;
+    public JMenuItem deLete;
+    public boolean iM;
     public int position;
     public int listLength;
     public int tckMajorGroups;
@@ -47,6 +175,7 @@ class MyFrame
     public volatile boolean nextGate;
     public volatile boolean backGate;
     public volatile boolean chngNme;
+    public volatile boolean nofile;
 
     private final String[] Party = {"Birthday", "Wedding", "Bridal", "Shower", "Baby", "Christmas", "Old Years", "Graduation"};
     private final String[] Enter_Product_Group = {};
@@ -57,8 +186,9 @@ class MyFrame
     // constructor, to initialize the components
     // with default values.
     public MyFrame(String path, String currentName, int index, int length, boolean change,
-                   int majorTicket, boolean[] grpTicket) {
+                   int majorTicket, boolean[] grpTicket, boolean noFile) {
         cont = false;
+        nofile = noFile;
         filePath = path;
         position = index;
         chngNme = change;
@@ -66,8 +196,9 @@ class MyFrame
         tckGroups = grpTicket;
         listLength = length - 1;
         tckMajorGroups = majorTicket;
+        iM = false;
         int chkWidth = 30;
-        int chkYPos = 130;
+        int chkYPos = 110;
         int chkLength = 200;
 
         if (index < listLength) {
@@ -93,13 +224,13 @@ class MyFrame
         title = new JLabel("Edit Barcode");
         title.setFont(new Font("Arial", Font.PLAIN, 15));
         title.setSize(100, 30);
-        title.setLocation(410, 25);
+        title.setLocation(410, 5);
         c.add(title);
 
         tname = new JTextField();
         tname.setFont(new Font("Arial", Font.PLAIN, 15));
         tname.setSize(250, 20);
-        tname.setLocation(405, 56);
+        tname.setLocation(405, 36);
         if (chngNme || majorTicket != 0) {
             tname.setText(bCode.substring(0, bCode.length() - 4));
         }
@@ -108,21 +239,21 @@ class MyFrame
         tags = new JLabel("Tags");
         tags.setFont(new Font("Arial", Font.PLAIN, 15));
         tags.setSize(50, 20);
-        tags.setLocation(408, 115);
+        tags.setLocation(408, 95);
         tags.setVisible(false);
         c.add(tags);
 
         sub = new JButton("Submit");
         sub.setFont(new Font("Arial", Font.PLAIN, 15));
         sub.setSize(70, 20);
-        sub.setLocation(407, 320);
+        sub.setLocation(407, 290);
         sub.addActionListener(this);
         c.add(sub);
 
         back = new JButton("Back");
         back.setFont(new Font("Arial", Font.PLAIN, 15));
         back.setSize(70, 20);
-        back.setLocation(408, 350);
+        back.setLocation(408, 320);
         back.addActionListener(this);
         back.setEnabled(backGate);
         c.add(back);
@@ -130,14 +261,14 @@ class MyFrame
         fin = new JButton("Finish");
         fin.setFont(new Font("Arial", Font.PLAIN, 15));
         fin.setSize(70, 20);
-        fin.setLocation(625, 350);
+        fin.setLocation(625, 320);
         fin.addActionListener(this);
         c.add(fin);
 
         next = new JButton("Next");
         next.setFont(new Font("Arial", Font.PLAIN, 15));
         next.setSize(70, 20);
-        next.setLocation(550, 350);
+        next.setLocation(550, 320);
         next.addActionListener(this);
         if (!nextGate) {
             next.setEnabled(false);
@@ -149,9 +280,30 @@ class MyFrame
         copy = new JButton("...");
         copy.setFont(new Font("Arial", Font.PLAIN, 15));
         copy.setSize(20, 20);
-        copy.setLocation(656, 56);
+        copy.setLocation(656, 36);
         copy.addActionListener(this);
         c.add(copy);
+
+
+        counter = new JLabel(String.valueOf(position + 1) + "/" + length);
+        counter.setFont(new Font("Arial", Font.PLAIN,11));
+        counter.setSize(15,15);
+        counter.setLocation(10,336);
+        c.add(counter);
+
+        menuBar = new JMenuBar();
+        fiLe = new JMenu("File");
+        imPort = new JMenuItem("Import");
+        oPen = new JMenuItem("Open");
+        deLete = new JMenuItem("Delete");
+        fiLe.add(deLete);
+        fiLe.add(imPort);
+        fiLe.add(oPen);
+        imPort.addActionListener(this);
+        oPen.addActionListener(this);
+        deLete.addActionListener(this);
+        menuBar.add(fiLe);
+        setJMenuBar(menuBar);
 
 
 
@@ -176,7 +328,7 @@ class MyFrame
         mgroup = new JComboBox(majorGroupsNames);
         mgroup.setFont(new Font("Arial", Font.PLAIN, 15));
         mgroup.setSize(270, 20);
-        mgroup.setLocation(405, 86);
+        mgroup.setLocation(405, 66);
         if (chngNme || majorTicket != 0) {
             mgroup.setSelectedIndex(tckMajorGroups);
         }
@@ -212,7 +364,7 @@ class MyFrame
         BufferedImage myImage;
         try {
             int width = 400;
-            int height = 400;
+            int height = 335;
             File f = new File(filePath);
             myImage = ImageIO.read(f);
             myPicture = myImage.getScaledInstance(width, height, Image.SCALE_FAST);
@@ -222,14 +374,31 @@ class MyFrame
             c.add(picLabel);
         } catch (IOException ignored) {
         }
+
+        if (nofile){
+            title.setVisible(false);
+            tname.setVisible(false);
+            sub.setVisible(false);
+            copy.setVisible(false);
+            counter.setVisible(false);
+            mgroup.setVisible(false);
+
+
+        }
+
         setVisible(true);
     }
+
+
+
 
     // method actionPerformed()
     // to get the action performed
     // by the user and act accordingly
     public void actionPerformed(ActionEvent e) {
         JDBCSelectTest jdbc = new JDBCSelectTest();
+        fileChooser fChoose = new fileChooser();
+
         if (e.getSource() == sub) {
             boolean there;
             try{
@@ -310,6 +479,32 @@ class MyFrame
             System.exit(0);
         } else if (e.getSource() == copy) {
             tname.setText(bCode.substring(0, bCode.length() - 4));
+        } else if (e.getSource() == imPort){
+            try {
+                fChoose.importer();
+                position = 0;
+                cont = true;
+                iM = true;
+                nofile = false;
+                dispose();
+
+            } catch (IOException ioException) {
+                ioException.printStackTrace();
+            }
+        } else if (e.getSource() == oPen){
+            try {
+                position = fChoose.openPosition(position, fChoose.fileName());
+                cont =true;
+                iM= fChoose.usedImport;
+                dispose();
+            } catch (IOException ioException) {
+                ioException.printStackTrace();
+            }
+        } else if (e.getSource() == deLete){
+            fChoose.deleter();
+            cont = true;
+            iM = true;
+            dispose();
         }
     }
 
@@ -323,66 +518,7 @@ class MyFrame
 
 }
 
-public class Registration {
 
-    public static void main(String[] args) throws InterruptedException, FileNotFoundException {
-        int index = 0;
-        int terminator = 0;
-        boolean change = false;
-        String[] pathnames = fileName();
-        int[] majorList = new int[pathnames.length];
-        boolean[][] grpList = new boolean[pathnames.length][MyFrame.options.length];
-        StringBuilder src = new StringBuilder(path(date()).toString());
-
-
-        while (index != -1) {
-            src.append("/").append(pathnames[index]);
-            MyFrame f = new MyFrame(src.toString(), pathnames[index], index, pathnames.length,
-                    change, majorList[index], grpList[index]);
-            while (!f.cont) {
-                Thread.sleep(60);
-                ++terminator;
-                if (terminator > 10000) {
-                    System.exit(0);
-                }
-            }
-            terminator = 0;
-            change = f.chngNme;
-            if (change) {
-                pathnames[index] = f.getBarcode() + ".jpg";
-                majorList[index] = f.tckMajorGroups;
-                grpList[index] = f.tckGroups;
-            }
-
-            src = new StringBuilder(path(date()).toString());
-            index = f.getPosition();
-        }
-    }
-
-
-    public static String[] fileName() {
-        Path p1 = path(date());
-        String pathname = p1.toString();
-        File f = new File(pathname);
-        FilenameFilter filter = new FilenameFilter() {
-            public boolean accept(File f, String name) {
-                return name.endsWith("jpg");
-            }
-        };
-        String[] fileName = f.list(filter); //makes a list of the files that end with "jpg" to exclude .DS_Store
-        return fileName;
-    }
-
-    public static Path path(LocalDate date) {
-        String date_str = date.toString();
-        return Paths.get(date_str);
-    }
-
-    public static LocalDate date() {
-        return java.time.LocalDate.now();
-    }
-
-}
 class JDBCSelectTest {
 
     public static boolean there(String barcode) throws FileNotFoundException {
@@ -446,6 +582,118 @@ class JDBCSelectTest {
         File config = new File("config.txt");
         Scanner con = new Scanner(config);
         return con.nextLine();
+    }
+
+}
+
+
+
+class fileChooser {
+
+    public static boolean usedImport = false;
+
+
+    public static void importer() throws IOException {
+
+        File[] files;
+        int response;
+        JFileChooser chooser = new JFileChooser(".");
+        chooser.addChoosableFileFilter(new FileNameExtensionFilter("Image Files", "jpg"));
+        chooser.setAcceptAllFileFilterUsed(false);
+        chooser.setMultiSelectionEnabled(true);
+        chooser.setFileSelectionMode(JFileChooser.FILES_AND_DIRECTORIES);
+        response = chooser.showOpenDialog(null);
+
+        if (response == JFileChooser.FILES_ONLY) {
+            if (chooser.getSelectedFile().getName().equals("no-image-icon.jpg")){
+
+            }else{
+                Files.deleteIfExists(Paths.get(date() + "/" + "no-image-icon.jpg" ));
+
+                usedImport = true;
+                files = chooser.getSelectedFiles();
+                File theDir = new File(String.valueOf(date()));
+                for (File file : files) {
+                    Files.copy(file.toPath(), Path.of(theDir + "/" + file.getName()), StandardCopyOption.REPLACE_EXISTING);
+                }
+            }
+        }
+    }
+
+    public static int openPosition(int index, String[] inDirectory) throws IOException {
+        File file;
+        int response;
+        JFileChooser chooser = new JFileChooser(path(date()).toString());
+        chooser.addChoosableFileFilter(new FileNameExtensionFilter("Image Files", "jpg"));
+        chooser.setAcceptAllFileFilterUsed(false);
+        chooser.setFileSelectionMode(JFileChooser.FILES_AND_DIRECTORIES);
+        response = chooser.showOpenDialog(null);
+
+
+        if(response == JFileChooser.FILES_ONLY) {
+            file = chooser.getSelectedFile();
+            System.out.println("file name: "+ file.getName());
+            if (file.getParentFile().toString().endsWith(path(date()).toString())) {
+                System.out.println("In Directory");
+                return position(file, inDirectory);
+            } else{
+                System.out.println("Out Directory");
+                File theDir = new File(date().toString());
+                Files.copy(file.toPath(), Path.of(theDir + "/" + file.getName()), StandardCopyOption.REPLACE_EXISTING);
+                return position(file, fileName());
+            }
+        }
+        return index;
+    }
+
+    public static void deleter(){
+
+        File[] files;
+        int response;
+        JFileChooser chooser = new JFileChooser(".");
+        chooser.addChoosableFileFilter(new FileNameExtensionFilter("Image Files", "jpg"));
+        chooser.setAcceptAllFileFilterUsed(false);
+        chooser.setMultiSelectionEnabled(true);
+        chooser.setFileSelectionMode(JFileChooser.FILES_AND_DIRECTORIES);
+        response = chooser.showOpenDialog(null);
+
+        if (response ==  JFileChooser.FILES_ONLY){
+            int r = JOptionPane.showConfirmDialog(null, "Delete (" + chooser.getSelectedFiles().length+ ") Files");
+            if (r == 0){
+                files = chooser.getSelectedFiles();
+                for (File f: files){
+                    f.delete();
+                }
+            }
+
+        }
+    }
+
+
+    public static int position(File file, String[] inDirectory){
+        int index = -1;
+        for (int i = 0; i < inDirectory.length; i++) {
+            if (inDirectory[i].equals(file.getName())) {
+                index =  i;
+                System.out.println(file.getName());
+            }
+        }
+        System.out.println("index = " + index);
+        return index;
+    }
+
+    public static String[] fileName() {
+        Registration r = new Registration();
+        return r.fileName();
+    }
+
+    public static LocalDate date() {
+        return java.time.LocalDate.now();
+    }
+
+    public static Path path(LocalDate date) {
+        String date_str = date.toString();
+        return Paths.get(date_str);
     }
 
 }

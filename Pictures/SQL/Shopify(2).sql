@@ -1,0 +1,7 @@
+/*
+-- Query: SELECT * FROM test_schema.Shopify
+LIMIT 0, 50000
+
+-- Date: 2021-07-15 16:25
+*/
+INSERT INTO `` (`Handle`,`Title`,`Body_HTML`,`Vendor`,`Type`,`Tags`,`Published`,`Option1_Name`,`Option1_Value`,`Option2_Name`,`Option2_Value`,`Option3_Name`,`Option3_Value`,`Variant_SKU`,`Variant_Grams`,`Variant_Inventory_Tracker`,`Variant_Inventory_Qty`,`Variant_Inventory_Policy`,`Variant_Fulfillment_Service`,`Variant_Price`,`Variant_Compare_At_Price`,`Variant_Requires_Shipping`,`Variant_Taxable`,`Variant_Barcode`,`Image_Src`,`Image_Position`,`Image_Alt_Text`,`Gift_Card`,`SEO_Title`,`SEO_Description`,`Google_Shopping_Google_Product_Category`,`Google_Shopping_Gender`,`Google_Shopping_Age_Group`,`Google_Shopping_MPN`,`Google_Shopping_AdWords_Grouping`,`Google_Shopping_AdWords_Labels`,`Google_Shopping_Condition`,`Google_Shopping_Custom_Product`,`Google_Shopping_Custom_Label_0`,`Google_Shopping_Custom_Label_1`,`Google_Shopping_Custom_Label_2`,`Google_Shopping_Custom_Label_3`,`Google_Shopping_Custom_Label_4`,`Variant_Image`,`Variant_Weight_Unit`,`Variant_Tax_Code`,`Cost_per_item`,`Status`) VALUES ('beads-#wg170831-3-pearl-100pcs','BEADS #WG170831-3 PEARL 100PCS','BEADS #WG170831-3 PEARL 100PCS','Muneshwers','Party','Wedding,Shower','FALSE','Title','Default Title',NULL,NULL,NULL,NULL,'WG170831-3 ',0,'shopify',-26,'deny','manual',200.00,NULL,'TRUE','TRUE',11,NULL,NULL,NULL,'FALSE',NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,'kg',NULL,NULL,'draft');
